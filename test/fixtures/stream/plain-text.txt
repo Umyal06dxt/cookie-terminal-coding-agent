@@ -1,0 +1,14 @@
+data: {"id":"chatcmpl-7f3a","object":"chat.completion.chunk","created":1792150000,"model":"deepseek-v4.1-flash","choices":[{"index":0,"delta":{"role":"assistant","content":""},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-7f3a","object":"chat.completion.chunk","created":1792150000,"model":"deepseek-v4.1-flash","choices":[{"index":0,"delta":{"content":"Fresh"},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-7f3a","object":"chat.completion.chunk","created":1792150000,"model":"deepseek-v4.1-flash","choices":[{"index":0,"delta":{"content":" out of"},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-7f3a","object":"chat.completion.chunk","created":1792150000,"model":"deepseek-v4.1-flash","choices":[{"index":0,"delta":{"content":" the oven 🍪"},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-7f3a","object":"chat.completion.chunk","created":1792150000,"model":"deepseek-v4.1-flash","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}
+
+data: {"id":"chatcmpl-7f3a","object":"chat.completion.chunk","created":1792150000,"model":"deepseek-v4.1-flash","choices":[],"usage":{"prompt_tokens":42,"completion_tokens":7,"total_tokens":49,"prompt_tokens_details":{"cached_tokens":32}}}
+
+data: [DONE]
+

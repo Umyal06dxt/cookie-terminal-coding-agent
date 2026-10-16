@@ -1,0 +1,6 @@
+data: {"id":"chatcmpl-e7r0","object":"chat.completion.chunk","created":1792150300,"model":"minimax-m3","choices":[{"index":0,"delta":{"role":"assistant","content":"Reading the"},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-e7r0","object":"chat.completion.chunk","created":1792150300,"model":"minimax-m3","choices":[{"index":0,"delta":{"content":" schema now"},"finish_reason":null}]}
+
+data: {"error":{"message":"upstream provider closed the connection","type":"api_error","code":"server_error","param":null}}
+
