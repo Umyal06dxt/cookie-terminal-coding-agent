@@ -161,3 +161,14 @@ export async function* streamChat(
     throw toProviderError(thrown);
   }
 }
+
+export type ChatStreamParams = Omit<StreamChatParams, 'client' | 'retry'>;
+
+/** The shape the agent loop depends on, so tests can swap in test/fake-model.ts. */
+export type ChatStream = (
+  params: ChatStreamParams,
+) => AsyncIterable<StreamEvent>;
+
+export function bindStream(client: OpenAI, retry?: RetryOptions): ChatStream {
+  return (params) => streamChat({ ...params, client, ...(retry && { retry }) });
+}
