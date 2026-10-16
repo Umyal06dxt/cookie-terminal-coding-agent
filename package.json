@@ -1,12 +1,23 @@
 {
   "name": "cookie",
-  "module": "index.ts",
+  "version": "0.1.0",
+  "description": "A terminal coding agent on the Command Code Provider API",
   "type": "module",
   "private": true,
-  "devDependencies": {
-    "@types/bun": "latest"
+  "bin": {
+    "cookie": "src/cli.ts"
   },
-  "peerDependencies": {
-    "typescript": "^5"
+  "scripts": {
+    "dev": "bun run src/cli.ts",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "build": "bun build --compile src/cli.ts --outfile dist/cookie"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.15",
+    "@types/bun": "latest",
+    "typescript": "^7.0.2"
   }
 }

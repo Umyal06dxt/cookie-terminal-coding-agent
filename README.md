@@ -1,15 +1,11 @@
 # cookie
 
-To install dependencies:
+A terminal coding agent on the Command Code Provider API. See `docs/design.md`.
 
 ```bash
 bun install
+bun run dev -- --help   # run the CLI from source
+bun test                # tests
+bun run typecheck && bun run lint
+bun run build           # single binary in dist/cookie
 ```
-
-To run:
-
-```bash
-bun run index.ts
-```
-
-This project was created using `bun init` in bun v1.3.14. [Bun](https://bun.com) is a fast all-in-one JavaScript runtime.
