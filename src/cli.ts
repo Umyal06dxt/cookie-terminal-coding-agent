@@ -7,7 +7,7 @@ import { type HeadlessFlags, headlessMain } from './headless/main.ts';
 export const USAGE = `cookie ${pkg.version} — a terminal coding agent
 
 Usage:
-  cookie [options]
+  cookie              Open the interactive UI (needs a terminal)
   cookie -p "<task>" [--json] [--yes]
 
 Options:
@@ -51,7 +51,8 @@ function usageError(message: string): CliResult {
 /** Either an answer to print right away, or a headless task to run. */
 export type Parsed =
   | { kind: 'result'; result: CliResult }
-  | { kind: 'headless'; flags: HeadlessFlags };
+  | { kind: 'headless'; flags: HeadlessFlags }
+  | { kind: 'interactive' };
 
 export function parseCli(argv: readonly string[]): Parsed {
   const done = (result: CliResult): Parsed => ({ kind: 'result', result });
@@ -88,7 +89,7 @@ export function parseCli(argv: readonly string[]): Parsed {
     if (stray !== null) {
       return done(usageError(`cookie: ${stray} only works with -p "<task>"`));
     }
-    return done({ code: 0, stdout: USAGE, stderr: '' });
+    return { kind: 'interactive' };
   }
   const task = values.print.trim();
   if (task === '') return done(usageError('cookie: -p needs a task to run'));
@@ -104,6 +105,22 @@ if (import.meta.main) {
     process.stdout.write(parsed.result.stdout);
     process.stderr.write(parsed.result.stderr);
     process.exitCode = parsed.result.code;
+  } else if (parsed.kind === 'interactive') {
+    if (process.stdin.isTTY && process.stdout.isTTY) {
+      // Loaded on demand: Ink and React aren't needed for --version or -p.
+      const { interactiveMain } = await import('./ui/main.tsx');
+      process.exitCode = await interactiveMain({
+        err: (text) => process.stderr.write(text),
+        version: pkg.version,
+      });
+    } else {
+      // No terminal to draw on (a pipe or CI): explain instead of failing in raw mode.
+      process.stdout.write(USAGE);
+      process.stderr.write(
+        'cookie: the interactive UI needs a terminal; use -p "<task>" in scripts.\n',
+      );
+      process.exitCode = EXIT.usage;
+    }
   } else {
     // exitCode, not exit(): exit() can cut off output still queued for a pipe.
     process.exitCode = await headlessMain(parsed.flags, {

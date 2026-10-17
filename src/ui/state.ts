@@ -55,7 +55,11 @@ export type UiAction =
   | { type: 'agent'; event: AgentEvent }
   /** The user sent a message; a run starts. */
   | { type: 'submit'; text: string }
-  | { type: 'notice'; tone: 'error' | 'info'; text: string };
+  | { type: 'notice'; tone: 'error' | 'info'; text: string }
+  /** /clear: a fresh conversation. Spend so far stays on the receipt. */
+  | { type: 'clear' }
+  /** Facts that arrive after startup, like the context window once the catalog loads. */
+  | { type: 'status'; patch: Partial<StatusInfo> };
 
 export function initialState(status: StatusInfo): UiState {
   return {
@@ -224,6 +228,14 @@ function onEvent(state: UiState, event: AgentEvent): UiState {
         failed: state.failed || END_NOTICES[event.reason] === 'error',
       };
       const tone = END_NOTICES[event.reason];
+      // The error notice already said what went wrong; "stopped because of an error" adds nothing.
+      const last = state.items.at(-1);
+      if (
+        event.reason === 'error' &&
+        last?.kind === 'notice' &&
+        last.tone === 'error'
+      )
+        return ended;
       return tone
         ? add(ended, { kind: 'notice', tone, text: event.summary })
         : ended;
@@ -248,5 +260,19 @@ export function reduce(state: UiState, action: UiAction): UiState {
         tone: action.tone,
         text: action.text,
       });
+    case 'clear':
+      return {
+        ...state,
+        items: [],
+        usage: { ...state.usage, lastPrompt: 0 },
+        failed: false,
+        lastEnd: null,
+      };
+    case 'status': {
+      const status = { ...state.status, ...action.patch };
+      // A price that arrives late starts the receipt from here.
+      const cost = status.price === null ? null : (state.usage.cost ?? 0);
+      return { ...state, status, usage: { ...state.usage, cost } };
+    }
   }
 }

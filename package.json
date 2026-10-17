@@ -13,7 +13,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "biome check .",
     "format": "biome format --write .",
-    "build": "bun build --compile src/cli.ts --outfile dist/cookie"
+    "build": "bun run scripts/build.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.15",

@@ -71,6 +71,15 @@ function walkFiles(root: string): string[] {
   return files;
 }
 
+/**
+ * Every file the glob tool searches, unsorted and uncapped: git's view in a repo (all ignore
+ * files), the root-.gitignore walk outside one. The UI's @ picker lists files with this too.
+ */
+export async function projectFiles(root: string): Promise<string[]> {
+  const files = (await gitFiles(root)) ?? walkFiles(root);
+  return files.filter((rel) => !skippedSegment(rel));
+}
+
 /** Makes a model-supplied pattern relative to the root with forward slashes. */
 function normalisePattern(root: string, pattern: string): string | null {
   let p = pattern.trim().replace(/\\/g, '/');
@@ -103,11 +112,11 @@ export const globTool = defineTool({
       };
     }
     const glob = new Bun.Glob(normalised);
-    const candidates = (await gitFiles(projectRoot)) ?? walkFiles(projectRoot);
+    const candidates = await projectFiles(projectRoot);
 
     const matches: { rel: string; mtimeMs: number }[] = [];
     for (const rel of candidates) {
-      if (skippedSegment(rel) || !glob.match(rel)) continue;
+      if (!glob.match(rel)) continue;
       try {
         const stat = statSync(join(projectRoot, rel));
         // Deleted-but-tracked files and submodule directories aren't results.

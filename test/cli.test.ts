@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import pkg from '../package.json' with { type: 'json' };
+import { parseCli } from '../src/cli.ts';
 import { scrubEnv } from '../src/tools/bash.ts';
 
 const CLI = join(import.meta.dir, '..', 'src', 'cli.ts');
@@ -91,5 +92,18 @@ describe('cookie CLI', () => {
     expect(code).toBe(1);
     expect(stdout).toBe('');
     expect(stderr).toContain('cookie.toml');
+  });
+});
+
+describe('cookie with no arguments', () => {
+  test('parses as the interactive UI', () => {
+    expect(parseCli([])).toEqual({ kind: 'interactive' });
+  });
+
+  test('without a terminal it prints usage and explains, instead of failing in raw mode', async () => {
+    const { code, stdout, stderr } = await cookie();
+    expect(code).toBe(2);
+    expect(stdout).toContain('Usage:');
+    expect(stderr).toContain('needs a terminal');
   });
 });

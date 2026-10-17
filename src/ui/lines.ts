@@ -8,6 +8,8 @@ export interface Seg {
   bold?: boolean;
   italic?: boolean;
   dim?: boolean;
+  /** Swapped colours: the input cursor, visible even without colour. */
+  inverse?: boolean;
 }
 
 /** One terminal row. Never wider than the width it was wrapped to. */
@@ -90,7 +92,8 @@ function sameStyle(a: Seg, b: Seg): boolean {
     a.bg === b.bg &&
     a.bold === b.bold &&
     a.italic === b.italic &&
-    a.dim === b.dim
+    a.dim === b.dim &&
+    a.inverse === b.inverse
   );
 }
 

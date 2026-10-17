@@ -23,17 +23,28 @@ export function renderItem(item: Item, columns: number): Line[] {
       return renderMarkdown(item.text, columns, INDENT);
     case 'tool':
       return toolCard(item, columns);
-    case 'notice':
-      return wrap(
-        [
-          item.tone === 'error'
-            ? { text: `${INDENT}✗ `, fg: 'jam' }
-            : { text: `${INDENT}· `, fg: 'chip' },
-          { text: item.text, fg: item.tone === 'error' ? 'jam' : 'chip' },
-        ],
-        columns,
-        `${INDENT}  `,
+    case 'notice': {
+      const fg = item.tone === 'error' ? 'jam' : 'chip';
+      // Notices can span lines (/help, provider details); wrap each one on its own.
+      return item.text.split('\n').flatMap((line, i) =>
+        wrap(
+          [
+            {
+              text:
+                i > 0
+                  ? `${INDENT}  `
+                  : item.tone === 'error'
+                    ? `${INDENT}✗ `
+                    : `${INDENT}· `,
+              fg,
+            },
+            { text: line, fg },
+          ],
+          columns,
+          `${INDENT}  `,
+        ),
       );
+    }
   }
 }
 

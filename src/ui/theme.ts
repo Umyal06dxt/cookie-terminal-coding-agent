@@ -98,6 +98,8 @@ export interface Theme {
   depth: ColorDepth;
   /** A colour Ink understands (hex or `ansi256(n)`), or undefined when colour is off. */
   color(token: Token): string | undefined;
+  /** The same for a raw hex colour (Chip's pixels), at this terminal's colour depth. */
+  hex(hex: string): string | undefined;
   /** The 1-character Chip for the status bar. */
   glyph: string;
 }
@@ -121,7 +123,10 @@ export function createTheme(options: ThemeOptions = {}): Theme {
     depth,
     color(token) {
       if (depth === 'none') return undefined;
-      const hex = palette[token];
+      return this.hex(palette[token]);
+    },
+    hex(hex) {
+      if (depth === 'none') return undefined;
       return depth === 'truecolor' ? hex : `ansi256(${hexTo256(hex)})`;
     },
     glyph: options.nerdFont ? NERD_COOKIE : '(•)',

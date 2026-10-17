@@ -1,6 +1,12 @@
 import { describe, expect, test } from 'bun:test';
 import { z } from 'zod';
-import { headlessGate, NEEDS_APPROVAL } from '../../src/safety/permissions.ts';
+import {
+  headlessGate,
+  interactiveGate,
+  NEEDS_APPROVAL,
+  type OvenMode,
+  READ_ONLY,
+} from '../../src/safety/permissions.ts';
 import { defineTool, type ToolKind } from '../../src/tools/types.ts';
 
 const toolOfKind = (kind: ToolKind) =>
@@ -37,4 +43,28 @@ describe('headlessGate', () => {
       expect(headlessGate(true)(toolOfKind(kind), {})).toBeNull();
     },
   );
+});
+
+describe('interactiveGate', () => {
+  test('read-only blocks write and shell tools, allows reads', () => {
+    const gate = interactiveGate(() => 'read-only');
+    expect(gate(toolOfKind('read'), {})).toBeNull();
+    expect(gate(toolOfKind('plan'), {})).toBeNull();
+    for (const kind of ['write', 'shell'] as const) {
+      const denied = gate(toolOfKind(kind), {});
+      expect(denied?.ok).toBe(false);
+      expect(denied?.output).toStartWith(READ_ONLY);
+      expect(denied?.output).not.toMatch(/^Error:/);
+      expect(denied?.summary).toBe('read-only (shift+tab)');
+    }
+  });
+
+  test('the mode is read on every call, so a toggle applies at once', () => {
+    let mode: OvenMode = 'read-only';
+    const gate = interactiveGate(() => mode);
+    expect(gate(toolOfKind('write'), {})).not.toBeNull();
+    mode = 'full-oven';
+    expect(gate(toolOfKind('write'), {})).toBeNull();
+    expect(gate(toolOfKind('shell'), {})).toBeNull();
+  });
 });

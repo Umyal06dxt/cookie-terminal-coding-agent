@@ -22,6 +22,7 @@ export function LineRow({ line }: { line: Line }) {
             bold={seg.bold === true}
             italic={seg.italic === true}
             dimColor={seg.dim === true}
+            inverse={seg.inverse === true}
           >
             {seg.text}
           </Text>
