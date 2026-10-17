@@ -8,12 +8,16 @@ export const USAGE = `cookie ${pkg.version} — a terminal coding agent
 
 Usage:
   cookie              Open the interactive UI (needs a terminal)
+  cookie --resume     Pick one of the last 10 sessions in this project and reopen it
+  cookie --continue   Reopen the most recent session
   cookie -p "<task>" [--json] [--yes]
 
 Options:
   -p, --print <task>  Run one task headless: text to stdout, tool activity to stderr
       --json          With -p: print one JSON event per line on stdout instead
       --yes           With -p: allow file changes and shell commands without asking
+  -r, --resume        Choose a recent session to reopen
+  -c, --continue      Reopen the most recent session
   -h, --help          Show this help and exit
   -v, --version       Print the version and exit
 
@@ -52,7 +56,10 @@ function usageError(message: string): CliResult {
 export type Parsed =
   | { kind: 'result'; result: CliResult }
   | { kind: 'headless'; flags: HeadlessFlags }
-  | { kind: 'interactive' };
+  | { kind: 'interactive'; resume: ResumeMode };
+
+/** --resume picks one of the last sessions; --continue reopens the newest. */
+export type ResumeMode = 'pick' | 'latest' | null;
 
 export function parseCli(argv: readonly string[]): Parsed {
   const done = (result: CliResult): Parsed => ({ kind: 'result', result });
@@ -62,6 +69,8 @@ export function parseCli(argv: readonly string[]): Parsed {
     print?: string | undefined;
     json?: boolean | undefined;
     yes?: boolean | undefined;
+    resume?: boolean | undefined;
+    continue?: boolean | undefined;
   };
   try {
     ({ values } = parseArgs({
@@ -72,6 +81,8 @@ export function parseCli(argv: readonly string[]): Parsed {
         print: { type: 'string', short: 'p' },
         json: { type: 'boolean' },
         yes: { type: 'boolean' },
+        resume: { type: 'boolean', short: 'r' },
+        continue: { type: 'boolean', short: 'c' },
       },
       strict: true,
       allowPositionals: false,
@@ -84,12 +95,24 @@ export function parseCli(argv: readonly string[]): Parsed {
   if (values.version) {
     return done({ code: 0, stdout: `${pkg.version}\n`, stderr: '' });
   }
+  if (values.resume && values.continue) {
+    return done(usageError('cookie: use --resume or --continue, not both'));
+  }
   if (values.print === undefined) {
     const stray = values.json ? '--json' : values.yes ? '--yes' : null;
     if (stray !== null) {
       return done(usageError(`cookie: ${stray} only works with -p "<task>"`));
     }
-    return { kind: 'interactive' };
+    const resume = values.resume ? 'pick' : values.continue ? 'latest' : null;
+    return { kind: 'interactive', resume };
+  }
+  if (values.resume || values.continue) {
+    const flag = values.resume ? '--resume' : '--continue';
+    return done(
+      usageError(
+        `cookie: ${flag} opens the interactive UI; it doesn't work with -p`,
+      ),
+    );
   }
   const task = values.print.trim();
   if (task === '') return done(usageError('cookie: -p needs a task to run'));
@@ -110,6 +133,7 @@ if (import.meta.main) {
       // Loaded on demand: Ink and React aren't needed for --version or -p.
       const { interactiveMain } = await import('./ui/main.tsx');
       process.exitCode = await interactiveMain({
+        resume: parsed.resume,
         err: (text) => process.stderr.write(text),
         version: pkg.version,
       });

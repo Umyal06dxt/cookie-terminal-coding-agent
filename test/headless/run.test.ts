@@ -8,6 +8,8 @@ import {
 import { runHeadless } from '../../src/headless/run.ts';
 import { ProviderError } from '../../src/provider/errors.ts';
 import { NEEDS_APPROVAL } from '../../src/safety/permissions.ts';
+import { SessionLog } from '../../src/storage/sessionLog.ts';
+import { recentSessions, restoreMessages } from '../../src/storage/sessions.ts';
 import { fakeModel, type ScriptedTurn } from '../fake-model.ts';
 import { cleanUpTempProjects, tempProject } from '../tools/helpers.ts';
 
@@ -31,10 +33,14 @@ async function headless(
     yes?: boolean;
     maxTurns?: number;
     signal?: AbortSignal;
+    log?: boolean;
   } = {},
 ) {
   const p = tempProject({ 'src/math.ts': MATH });
   const model = fakeModel(script);
+  const log = options.log
+    ? new SessionLog({ projectRoot: p.root, model: 'fake-main' })
+    : undefined;
   let stdout = '';
   let stderr = '';
   const code = await runHeadless({
@@ -53,6 +59,7 @@ async function headless(
     },
     environment: { ...ENV, projectRoot: p.root },
     ...(options.signal !== undefined && { signal: options.signal }),
+    ...(log !== undefined && { log }),
   });
   return { code, stdout, stderr, model, p };
 }
@@ -242,5 +249,22 @@ describe('headless approvals', () => {
   test('edit is gated too', async () => {
     const { p } = await headless(fixScript);
     expect(p.read('src/math.ts')).toBe(MATH);
+  });
+});
+
+describe('runHeadless session log', () => {
+  test('a -p run is logged in full, so --resume can reopen it', async () => {
+    const { code, p, model } = await headless(fixScript, {
+      yes: true,
+      log: true,
+    });
+    expect(code).toBe(0);
+    const [session] = recentSessions(p.root);
+    expect(session?.firstMessage).toBe('fix add in src/math.ts');
+    // Everything the model saw on its last request, plus its final answer.
+    const lastRequest = model.requests.at(-1)?.messages ?? [];
+    const restored = restoreMessages(session?.records ?? []);
+    expect(restored.slice(0, lastRequest.length)).toEqual(lastRequest);
+    expect(restored.at(-1)?.role).toBe('assistant');
   });
 });

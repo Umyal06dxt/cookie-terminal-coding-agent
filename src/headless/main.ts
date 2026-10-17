@@ -1,6 +1,8 @@
 import { findRepoRoot, loadConfig } from '../config/load.ts';
 import { prepareProvider } from '../provider/startup.ts';
 import { bindStream } from '../provider/stream.ts';
+import { SessionLog } from '../storage/sessionLog.ts';
+import { realRoot } from '../tools/paths.ts';
 import { EXIT, type Write } from './format.ts';
 import { runHeadless } from './run.ts';
 
@@ -59,11 +61,14 @@ export async function headlessMain(
       io.err(`${provider.message}\n`);
       return EXIT.error;
     }
+    const model = config.models[config.roles.main];
+    const projectRoot = findRepoRoot(cwd);
     return await runHeadless({
       ...flags,
-      model: config.models[config.roles.main],
+      model,
       stream: bindStream(provider.client),
-      projectRoot: findRepoRoot(cwd),
+      projectRoot,
+      log: new SessionLog({ projectRoot: realRoot(projectRoot), model }),
       maxTurns: config.limits.max_turns,
       permissions: config.permissions,
       out: io.out,

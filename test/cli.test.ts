@@ -97,7 +97,30 @@ describe('cookie CLI', () => {
 
 describe('cookie with no arguments', () => {
   test('parses as the interactive UI', () => {
-    expect(parseCli([])).toEqual({ kind: 'interactive' });
+    expect(parseCli([])).toEqual({ kind: 'interactive', resume: null });
+  });
+
+  test('--resume picks a session, --continue takes the newest', () => {
+    expect(parseCli(['--resume'])).toEqual({
+      kind: 'interactive',
+      resume: 'pick',
+    });
+    expect(parseCli(['-r'])).toEqual({ kind: 'interactive', resume: 'pick' });
+    expect(parseCli(['--continue'])).toEqual({
+      kind: 'interactive',
+      resume: 'latest',
+    });
+    expect(parseCli(['-c'])).toEqual({ kind: 'interactive', resume: 'latest' });
+  });
+
+  test.each([
+    [['--resume', '--continue'], 'not both'],
+    [['-p', 'x', '--continue'], "doesn't work with -p"],
+  ])('bad resume usage %j exits 2', (args, message) => {
+    const parsed = parseCli(args);
+    if (parsed.kind !== 'result') throw new Error('expected a usage error');
+    expect(parsed.result.code).toBe(2);
+    expect(parsed.result.stderr).toContain(message);
   });
 
   test('without a terminal it prints usage and explains, instead of failing in raw mode', async () => {

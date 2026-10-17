@@ -8,6 +8,7 @@ import {
 import { Session } from '../agent/session.ts';
 import type { ChatStream } from '../provider/stream.ts';
 import { headlessGate, policyFrom } from '../safety/permissions.ts';
+import type { SessionLog } from '../storage/sessionLog.ts';
 import { createDefaultRegistry } from '../tools/index.ts';
 import { realRoot } from '../tools/paths.ts';
 import type { ReadLedger } from '../tools/types.ts';
@@ -29,6 +30,8 @@ export interface HeadlessOptions {
   out: Write;
   err: Write;
   signal?: AbortSignal;
+  /** Where the run is logged, so `cookie --resume` can reopen it. */
+  log?: SessionLog;
   /** Overrides the detected environment, so tests get a fixed prompt. */
   environment?: PromptEnvironment;
 }
@@ -59,13 +62,34 @@ export async function runHeadless(options: HeadlessOptions): Promise<number> {
     { role: 'user', content: options.task },
   ]);
 
-  let onEvent: (event: AgentEvent) => void;
+  let print: (event: AgentEvent) => void;
   if (options.json) {
-    onEvent = jsonPrinter(options.out);
+    print = jsonPrinter(options.out);
   } else {
     const printer = new TextPrinter(options.out, options.err);
-    onEvent = (event) => printer.handle(event);
+    print = (event) => printer.handle(event);
   }
+
+  // A log that can't be written is reported once on stderr; the run itself carries on.
+  let logBroken = false;
+  const record = (write: (log: SessionLog) => void) => {
+    if (!options.log || logBroken) return;
+    try {
+      write(options.log);
+    } catch (error) {
+      logBroken = true;
+      const why = error instanceof Error ? error.message : String(error);
+      options.err(`cookie: couldn't write the session log: ${why}\n`);
+    }
+  };
+  record((log) => log.submit(options.task));
+  const onEvent = (event: AgentEvent) => {
+    print(event);
+    record((log) => {
+      log.event(event);
+      log.messages(session.messages);
+    });
+  };
 
   const reason = await runAgent({
     session,
@@ -75,6 +99,10 @@ export async function runHeadless(options: HeadlessOptions): Promise<number> {
     maxTurns: options.maxTurns,
     onEvent,
     ...(options.signal !== undefined && { signal: options.signal }),
+  });
+  record((log) => {
+    log.messages(session.messages);
+    log.close();
   });
   return exitCodeFor(reason);
 }

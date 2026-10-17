@@ -1,3 +1,4 @@
+import { COMMANDS } from './picker.ts';
 /** How long a first Ctrl+C stays armed. */
 export const EXIT_WINDOW_MS = 2000;
 
@@ -50,3 +51,11 @@ export function footerHints(state: {
     : ['/ commands', '@ files', '\\⏎ newline', 'ctrl+c ×2 exit'];
   return [`${state.mode} mode`, '⇧⇥ oven', ...keys].join(' · ');
 }
+
+/** What /help prints. */
+export const HELP = [
+  'enter sends · shift+enter, alt+enter or a trailing \\ adds a line · up/down browse history',
+  '/ lists commands · @ picks a file · pgup/pgdn scroll',
+  'shift+tab cycles taste / bake / full oven · esc interrupts · ctrl+c twice exits',
+  `Commands: ${COMMANDS.map((c) => c.name).join(', ')}`,
+].join('\n');

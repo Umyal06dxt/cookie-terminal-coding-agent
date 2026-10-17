@@ -1,7 +1,9 @@
 import { Box, useApp, useInput, useWindowSize } from 'ink';
+import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import type { Approvals } from '../safety/approvals.ts';
 import { MODE_LABELS, nextMode, type OvenMode } from '../safety/permissions.ts';
+import type { SessionLog } from '../storage/sessionLog.ts';
 import {
   ApprovalPane,
   approvalPaneHeight,
@@ -21,13 +23,14 @@ import {
 } from './editor.ts';
 import { inputRows, pickerRows } from './input-view.ts';
 import { intentFor } from './keymap.ts';
-import { createCtrlC, footerHints } from './keys.ts';
-import { applyPick, COMMANDS, pickerFor } from './picker.ts';
+import { createCtrlC, footerHints, HELP } from './keys.ts';
+import { applyPick, pickerFor } from './picker.ts';
 import {
   initialState,
   reduce,
   type StatusInfo,
   spinnerVisible,
+  type UiState,
 } from './state.ts';
 import { useApproval } from './use-approval.ts';
 
@@ -39,6 +42,10 @@ export interface AppProps {
   listFiles: () => Promise<string[]>;
   /** The gate reads this, so shift+tab takes effect on the next tool call. */
   oven: { get(): OvenMode; set(mode: OvenMode): void };
+  /** Appends the session to .cookie/sessions; absent in tests. */
+  log?: SessionLog;
+  /** A resumed session: its transcript and its conversation. */
+  resume?: { state: UiState; messages: ChatCompletionMessageParam[] };
   /** Where approval cards come from: the interactive gate asks through it. */
   approvals: Approvals;
   version: string;
@@ -46,13 +53,6 @@ export interface AppProps {
   size?: { columns: number; rows: number };
   now?: () => number;
 }
-
-const HELP = [
-  'enter sends · shift+enter, alt+enter or a trailing \\ adds a line · up/down browse history',
-  '/ lists commands · @ picks a file · pgup/pgdn scroll',
-  'shift+tab cycles taste / bake / full oven · esc interrupts · ctrl+c twice exits',
-  `Commands: ${COMMANDS.map((c) => c.name).join(', ')}`,
-].join('\n');
 
 export function App(props: AppProps) {
   const app = useApp();
@@ -62,10 +62,18 @@ export function App(props: AppProps) {
   const rows = props.size?.rows ?? Math.max(12, terminal.rows - 1);
   const now = props.now ?? Date.now;
 
-  const [state, dispatch] = useReducer(reduce, props.status, initialState);
-  const controller = useMemo(
-    () => new ChatController(props.ready, dispatch),
-    [props.ready],
+  const [state, dispatch] = useReducer(
+    reduce,
+    props.status,
+    (status) => props.resume?.state ?? initialState(status),
+  );
+  // Built once: the provider, log and resumed conversation are fixed for the app's life.
+  const [controller] = useState(
+    () =>
+      new ChatController(props.ready, dispatch, {
+        ...(props.log !== undefined && { log: props.log }),
+        ...(props.resume !== undefined && { messages: props.resume.messages }),
+      }),
   );
   const ctrlC = useMemo(() => createCtrlC(now), [now]);
   const [editor, setEditor] = useState<EditorState>(() => emptyEditor());
