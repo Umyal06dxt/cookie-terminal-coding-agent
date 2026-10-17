@@ -60,6 +60,7 @@ describe('glob', () => {
     expect(result).toEqual({
       ok: true,
       output: 'No files match *.ts.',
+      summary: '0 files',
       hint: 'To search subfolders too, use "**/*.ts".',
     });
   });

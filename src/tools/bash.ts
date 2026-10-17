@@ -197,6 +197,10 @@ export const bashTool = defineTool({
     }
     const status =
       exitCode === null ? 'Killed by a signal.' : `Exit code ${exitCode}.`;
-    return { ok: exitCode === 0, output: `${status}\n${body}` };
+    return {
+      ok: exitCode === 0,
+      output: `${status}\n${body}`,
+      summary: exitCode === null ? 'killed' : `exit ${exitCode}`,
+    };
   },
 });

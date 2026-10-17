@@ -16,6 +16,7 @@ describe('read', () => {
     expect(result).toEqual({
       ok: true,
       output: '     1\tone\n     2\ttwo\n     3\tthree',
+      summary: '3 lines',
     });
     const stat = statSync(p.path('a.ts'));
     expect(p.ledger.get(p.path('a.ts'))).toEqual({
@@ -75,6 +76,7 @@ describe('read', () => {
     expect(await read(p, { file_path: 'empty.ts' })).toEqual({
       ok: true,
       output: 'The file is empty.',
+      summary: '0 lines',
     });
     expect(p.ledger.get(p.path('empty.ts'))?.full).toBe(true);
   });

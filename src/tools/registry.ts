@@ -67,6 +67,12 @@ export function formatResult(result: ToolResult): string {
     : result.output;
 }
 
+/**
+ * Decides whether a validated call may run. Returns null to allow it, or the result the model
+ * sees instead (the tool does not run).
+ */
+export type ToolGate = (tool: Tool, args: unknown) => ToolResult | null;
+
 export class ToolRegistry {
   private readonly tools = new Map<string, Tool>();
   private readonly parameters = new Map<string, JsonObject>();
@@ -117,6 +123,7 @@ export class ToolRegistry {
     name: string,
     args: unknown,
     context: ToolContext,
+    gate?: ToolGate,
   ): Promise<ToolResult> {
     const tool = this.tools.get(name);
     if (!tool) {
@@ -134,6 +141,8 @@ export class ToolRegistry {
         hint: `Fix those fields and call ${name} again.`,
       };
     }
+    const denied = gate?.(tool, parsed.data);
+    if (denied) return { ...denied, output: scrubPrefix(denied.output) };
     let result: ToolResult;
     try {
       result = await tool.run(parsed.data, context);
@@ -155,7 +164,10 @@ export class ToolRegistry {
   }
 
   /** Adapts every tool to the loop's interface, bound to this session's root and ledger. */
-  forAgent(session: Omit<ToolContext, 'signal'>): AgentTool[] {
+  forAgent(
+    session: Omit<ToolContext, 'signal'>,
+    options: { gate?: ToolGate } = {},
+  ): AgentTool[] {
     // Paths are compared against the real root; a symlinked or 8.3-style root would make
     // every file look like it lives outside the project.
     const context = { ...session, projectRoot: realRoot(session.projectRoot) };
@@ -164,8 +176,17 @@ export class ToolRegistry {
       description: tool.description,
       parameters: this.parameters.get(tool.name) ?? {},
       run: async (args, { signal }) => {
-        const result = await this.run(tool.name, args, { ...context, signal });
-        return { ok: result.ok, content: formatResult(result) };
+        const result = await this.run(
+          tool.name,
+          args,
+          { ...context, signal },
+          options.gate,
+        );
+        return {
+          ok: result.ok,
+          content: formatResult(result),
+          ...(result.summary !== undefined && { summary: result.summary }),
+        };
       },
     }));
   }

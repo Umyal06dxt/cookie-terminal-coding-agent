@@ -114,6 +114,7 @@ export const editTool = defineTool({
     return {
       ok: true,
       output: `Edited ${path.rel}: replaced ${what}, starting at line ${outcome.firstLine}.`,
+      summary: `replaced ${what}`,
     };
   },
 });

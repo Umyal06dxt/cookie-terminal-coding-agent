@@ -24,6 +24,11 @@ export function numberLines(
     .join('\n');
 }
 
+/** "1 line", "42 lines". */
+export function plural(n: number, word: string): string {
+  return `${n} ${word}${n === 1 ? '' : 's'}`;
+}
+
 export const readTool = defineTool({
   name: 'read',
   kind: 'read',
@@ -89,7 +94,7 @@ export const readTool = defineTool({
         size: stat.size,
         full: true,
       });
-      return { ok: true, output: 'The file is empty.' };
+      return { ok: true, output: 'The file is empty.', summary: '0 lines' };
     }
     if (offset > lines.length) {
       return {
@@ -120,6 +125,6 @@ export const readTool = defineTool({
         last < lines.length ? `; continue with offset=${last + 1}` : '';
       output += `\n\n(Showing lines ${offset}-${last} of ${lines.length}${more}.)`;
     }
-    return { ok: true, output };
+    return { ok: true, output, summary: plural(slice.length, 'line') };
   },
 });

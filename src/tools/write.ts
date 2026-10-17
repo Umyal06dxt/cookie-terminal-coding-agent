@@ -66,6 +66,7 @@ export const writeTool = defineTool({
     return {
       ok: true,
       output: `${exists ? 'Overwrote' : 'Created'} ${path.rel} (${lines} line${lines === 1 ? '' : 's'}).`,
+      summary: `${exists ? 'overwrote' : 'created'}, ${lines} line${lines === 1 ? '' : 's'}`,
     };
   },
 });

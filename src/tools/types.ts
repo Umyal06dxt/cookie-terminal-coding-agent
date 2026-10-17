@@ -28,6 +28,8 @@ export interface ToolResult {
   ok: boolean;
   output: string;
   hint?: string;
+  /** A few words for the one-line tool card, e.g. "42 lines". Never file content. */
+  summary?: string;
 }
 
 export interface Tool<S extends z.ZodObject = z.ZodObject> {

@@ -19,6 +19,7 @@ describe('write', () => {
     expect(result).toEqual({
       ok: true,
       output: 'Created src/deep/new.ts (1 line).',
+      summary: 'created, 1 line',
     });
     expect(p.read('src/deep/new.ts')).toBe('export {};\n');
     // Writing a file counts as knowing all of it, so it can be edited straight away.
@@ -62,6 +63,7 @@ describe('write', () => {
     expect(await write(p, 'a.ts', 'new\nlines\n')).toEqual({
       ok: true,
       output: 'Overwrote a.ts (2 lines).',
+      summary: 'overwrote, 2 lines',
     });
     expect(p.read('a.ts')).toBe('new\nlines\n');
   });

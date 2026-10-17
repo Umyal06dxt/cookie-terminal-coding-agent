@@ -36,7 +36,11 @@ describe('bash', () => {
     async () => {
       const p = tempProject({ 'marker.txt': 'here' });
       const result = await bash(p, { command: 'cat marker.txt' });
-      expect(result).toEqual({ ok: true, output: 'Exit code 0.\nhere' });
+      expect(result).toEqual({
+        ok: true,
+        output: 'Exit code 0.\nhere',
+        summary: 'exit 0',
+      });
     },
   );
 

@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { isAbsolute, join, relative, sep } from 'node:path';
 import { z } from 'zod';
+import { plural } from './read.ts';
 import { defineTool } from './types.ts';
 
 export const GLOB_LIMIT = 200;
@@ -118,10 +119,12 @@ export const globTool = defineTool({
 
     if (matches.length === 0) {
       const output = `No files match ${normalised}.`;
-      if (normalised.includes('/')) return { ok: true, output };
+      if (normalised.includes('/'))
+        return { ok: true, output, summary: '0 files' };
       return {
         ok: true,
         output,
+        summary: '0 files',
         hint: `To search subfolders too, use "**/${normalised}".`,
       };
     }
@@ -130,6 +133,10 @@ export const globTool = defineTool({
     const rest = matches.length - shown.length;
     const footer =
       rest > 0 ? `\n(${rest} more not shown; use a narrower pattern.)` : '';
-    return { ok: true, output: shown.join('\n') + footer };
+    return {
+      ok: true,
+      output: shown.join('\n') + footer,
+      summary: plural(matches.length, 'file'),
+    };
   },
 });

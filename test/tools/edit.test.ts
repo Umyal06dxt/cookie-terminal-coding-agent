@@ -25,6 +25,7 @@ describe('edit', () => {
     expect(result).toEqual({
       ok: true,
       output: 'Edited oven.ts: replaced 1 occurrence, starting at line 2.',
+      summary: 'replaced 1 occurrence',
     });
     expect(p.read('oven.ts')).toBe('const temp = 180;\nconst time = 14;\n');
   });

@@ -8,7 +8,7 @@ import {
   formatResult,
   ToolRegistry,
 } from '../../src/tools/registry.ts';
-import { defineTool } from '../../src/tools/types.ts';
+import { defineTool, type ToolResult } from '../../src/tools/types.ts';
 import { fakeModel } from '../fake-model.ts';
 import { tempProject, useTempProjects } from './helpers.ts';
 
@@ -147,6 +147,78 @@ describe('ToolRegistry', () => {
         'The thrower tool failed unexpectedly: the oven door is stuck\n\nHint: Check the arguments, or try a different approach.',
     });
     expect(formatResult({ ok: true, output: 'x' })).toBe('x');
+  });
+});
+
+describe('ToolRegistry gate', () => {
+  const ran: unknown[] = [];
+  const counted = defineTool({
+    name: 'counted',
+    kind: 'write',
+    description: 'records each run',
+    schema: z.object({ n: z.number() }),
+    run: async (args) => {
+      ran.push(args);
+      return { ok: true, output: 'ran', summary: 'did it' };
+    },
+  });
+  const deny = (): ToolResult => ({
+    ok: false,
+    output: 'Error: not allowed here.',
+    hint: 'Ask first.',
+  });
+  const signal = new AbortController().signal;
+
+  test('a denying gate answers instead of the tool, which never runs', async () => {
+    ran.length = 0;
+    const p = tempProject();
+    const seen: string[] = [];
+    const result = await new ToolRegistry()
+      .register(counted)
+      .run('counted', { n: 1 }, p.ctx(), (tool, args) => {
+        seen.push(`${tool.kind}:${JSON.stringify(args)}`);
+        return deny();
+      });
+    expect(ran).toEqual([]);
+    expect(seen).toEqual(['write:{"n":1}']);
+    // The no-"Error:" rule holds for gate answers too.
+    expect(result).toEqual({
+      ok: false,
+      output: 'not allowed here.',
+      hint: 'Ask first.',
+    });
+  });
+
+  test('arguments are validated before the gate is asked', async () => {
+    let asked = false;
+    const result = await new ToolRegistry()
+      .register(counted)
+      .run('counted', { n: 'one' }, tempProject().ctx(), () => {
+        asked = true;
+        return deny();
+      });
+    expect(asked).toBe(false);
+    expect(result.output).toContain('The arguments for counted are invalid');
+  });
+
+  test('forAgent applies the gate and passes summaries through', async () => {
+    ran.length = 0;
+    const p = tempProject();
+    const session = { projectRoot: p.root, readLedger: p.ledger };
+    const [open] = new ToolRegistry().register(counted).forAgent(session);
+    expect(await open?.run({ n: 2 }, { signal })).toEqual({
+      ok: true,
+      content: 'ran',
+      summary: 'did it',
+    });
+    const [gated] = new ToolRegistry()
+      .register(counted)
+      .forAgent(session, { gate: deny });
+    expect(await gated?.run({ n: 3 }, { signal })).toEqual({
+      ok: false,
+      content: 'not allowed here.\n\nHint: Ask first.',
+    });
+    expect(ran).toEqual([{ n: 2 }]);
   });
 });
 
