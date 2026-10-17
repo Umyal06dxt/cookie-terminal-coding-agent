@@ -125,6 +125,31 @@ describe('ToolRegistry', () => {
     expect(result.output).toBe('something broke');
   });
 
+  test("an async gate can wait, refuse, or run the user's edited arguments", async () => {
+    const registry = new ToolRegistry().register(echo);
+    const ctx = tempProject().ctx();
+    const edited = await registry.run('echo', { text: 'a' }, ctx, async () => {
+      await Bun.sleep(1);
+      return { editedArgs: { text: 'b', times: 2 } };
+    });
+    expect(edited).toEqual({ ok: true, output: 'bb' });
+    const bad = await registry.run('echo', { text: 'a' }, ctx, async () => ({
+      editedArgs: { text: 7 },
+    }));
+    expect(bad.ok).toBe(false);
+    expect(bad.output).toContain("The user's edited version");
+    const refused = await registry.run(
+      'echo',
+      { text: 'a' },
+      ctx,
+      async () => ({
+        ok: false,
+        output: 'Error: declined',
+      }),
+    );
+    expect(refused).toEqual({ ok: false, output: 'declined' });
+  });
+
   test('unknown tool names list the real ones', async () => {
     const result = await new ToolRegistry()
       .register(echo)

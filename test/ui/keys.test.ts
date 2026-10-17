@@ -32,17 +32,17 @@ describe('ctrl+c twice', () => {
 describe('footer', () => {
   test('names the mode and the keys that work now', () => {
     expect(
-      footerHints({ busy: false, armed: false, readOnly: true }),
-    ).toStartWith('Read-only · / commands');
-    expect(footerHints({ busy: true, armed: false, readOnly: false })).toBe(
-      'Full oven · esc interrupt · ctrl+c twice to exit',
+      footerHints({ busy: false, armed: false, mode: 'Bake' }),
+    ).toStartWith('Bake mode · ⇧⇥ oven · / commands');
+    expect(footerHints({ busy: true, armed: false, mode: 'Full oven' })).toBe(
+      'Full oven mode · ⇧⇥ oven · esc interrupt · ctrl+c ×2 exit',
     );
-    expect(footerHints({ busy: true, armed: true, readOnly: true })).toBe(
+    expect(footerHints({ busy: true, armed: true, mode: 'Taste' })).toBe(
       'Press ctrl+c again to exit',
     );
     expect(
       Bun.stringWidth(
-        footerHints({ busy: false, armed: false, readOnly: false }),
+        footerHints({ busy: false, armed: false, mode: 'Full oven' }),
       ),
     ).toBeLessThan(80);
   });

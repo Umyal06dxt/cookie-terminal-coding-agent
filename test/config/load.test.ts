@@ -79,6 +79,7 @@ describe('loadConfig', () => {
       },
       pricing: {},
       ui: { theme: 'auto', nerd_font: false },
+      permissions: { mode: 'bake', allow: [], deny: [] },
     });
   });
 
@@ -117,6 +118,39 @@ theme = "sepia"
     expect(message).toContain('[pricing.m] input: must be 0 or more');
     expect(message).toContain('[pricing.m] output: must be a number');
     expect(message).toContain('[ui] theme: must be "auto", "dark" or "light"');
+  });
+
+  test('[permissions] reads the mode and command patterns', () => {
+    write(
+      userFile,
+      `${MODELS}
+[permissions]
+mode = "taste"
+allow = ["bun test*", "git status"]
+deny = ["rm -rf *"]
+`,
+    );
+    const result = load();
+    if (!result.ok) throw new Error(result.message);
+    expect(result.config.permissions).toEqual({
+      mode: 'taste',
+      allow: ['bun test*', 'git status'],
+      deny: ['rm -rf *'],
+    });
+  });
+
+  test('a bad [permissions] entry names the field', () => {
+    write(
+      userFile,
+      `${MODELS}\n[permissions]\nmode = "yolo"\nallow = "bun test"\n`,
+    );
+    const message = failure();
+    expect(message).toContain(
+      '[permissions] mode: must be "taste", "bake" or "full-oven"',
+    );
+    expect(message).toContain(
+      '[permissions] allow: must be a list of command patterns',
+    );
   });
 
   test('the project file overrides the user file key by key', () => {

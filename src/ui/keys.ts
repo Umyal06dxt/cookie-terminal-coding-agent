@@ -37,16 +37,16 @@ export function createCtrlC(now: () => number = Date.now) {
 
 export type CtrlC = ReturnType<typeof createCtrlC>;
 
-/** The footer: mode and the keys that do something right now. */
+/** The footer: the oven mode and the keys that do something right now. */
 export function footerHints(state: {
   busy: boolean;
   armed: boolean;
-  readOnly: boolean;
+  /** "Taste", "Bake" or "Full oven". */
+  mode: string;
 }): string {
   if (state.armed) return 'Press ctrl+c again to exit';
-  const mode = state.readOnly ? 'Read-only' : 'Full oven';
   const keys = state.busy
-    ? ['esc interrupt', 'ctrl+c twice to exit']
-    : ['/ commands', '@ files', '⌥⏎ or \\⏎ newline', 'ctrl+c twice to exit'];
-  return [mode, ...keys].join(' · ');
+    ? ['esc interrupt', 'ctrl+c ×2 exit']
+    : ['/ commands', '@ files', '\\⏎ newline', 'ctrl+c ×2 exit'];
+  return [`${state.mode} mode`, '⇧⇥ oven', ...keys].join(' · ');
 }

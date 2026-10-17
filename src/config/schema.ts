@@ -72,6 +72,30 @@ const uiSchema = z.strictObject({
   nerd_font: z.boolean({ error: 'must be true or false' }).default(false),
 });
 
+const commandPatterns = z
+  .array(
+    z
+      .string({ error: 'must be a command pattern string' })
+      .trim()
+      .min(1, 'must not be empty'),
+    {
+      error:
+        'must be a list of command patterns, e.g. ["bun test*", "git status"]',
+    },
+  )
+  .default([]);
+
+/** [permissions]: shell command patterns ("*" matches anything) and the starting oven mode. */
+const permissionsSchema = z.strictObject({
+  mode: z
+    .enum(['taste', 'bake', 'full-oven'], {
+      error: 'must be "taste", "bake" or "full-oven"',
+    })
+    .default('bake'),
+  allow: commandPatterns,
+  deny: commandPatterns,
+});
+
 export const configSchema = z.strictObject({
   provider: providerSchema.prefault({}),
   models: modelsSchema,
@@ -80,6 +104,7 @@ export const configSchema = z.strictObject({
   /** Keyed by model id, e.g. [pricing."deepseek-v4.1-flash"]. */
   pricing: z.record(z.string(), modelPriceSchema).default({}),
   ui: uiSchema.prefault({}),
+  permissions: permissionsSchema.prefault({}),
 });
 
 export type ModelPrice = z.infer<typeof modelPriceSchema>;

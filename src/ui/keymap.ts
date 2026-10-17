@@ -93,7 +93,7 @@ export function intentFor(input: string, k: KeyInfo, ctx: KeyContext): Intent {
   return action ? { type: 'edit', action } : { type: 'none' };
 }
 
-function editorKey(input: string, k: KeyInfo): EditorAction | null {
+export function editorKey(input: string, k: KeyInfo): EditorAction | null {
   if (k.upArrow) return { type: 'up' };
   if (k.downArrow) return { type: 'down' };
   if (k.leftArrow) return { type: 'left' };

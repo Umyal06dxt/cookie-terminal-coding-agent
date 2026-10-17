@@ -7,7 +7,7 @@ import {
 } from '../agent/prompts/system.ts';
 import { Session } from '../agent/session.ts';
 import type { ChatStream } from '../provider/stream.ts';
-import { headlessGate } from '../safety/permissions.ts';
+import { headlessGate, policyFrom } from '../safety/permissions.ts';
 import { createDefaultRegistry } from '../tools/index.ts';
 import { realRoot } from '../tools/paths.ts';
 import type { ReadLedger } from '../tools/types.ts';
@@ -24,6 +24,8 @@ export interface HeadlessOptions {
   stream: ChatStream;
   projectRoot: string;
   maxTurns: number;
+  /** cookie.toml [permissions]; destructive commands are refused either way. */
+  permissions?: { allow: readonly string[]; deny: readonly string[] };
   out: Write;
   err: Write;
   signal?: AbortSignal;
@@ -38,7 +40,15 @@ export async function runHeadless(options: HeadlessOptions): Promise<number> {
   const readLedger: ReadLedger = new Map();
   const tools = registry.forAgent(
     { projectRoot, readLedger },
-    { gate: headlessGate(options.yes) },
+    {
+      gate: headlessGate(
+        options.yes,
+        policyFrom(
+          { permissions: options.permissions ?? { allow: [], deny: [] } },
+          projectRoot,
+        ),
+      ),
+    },
   );
   const prompt = buildSystemPrompt(
     tools,

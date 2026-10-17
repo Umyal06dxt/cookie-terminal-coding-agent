@@ -67,11 +67,17 @@ export function formatResult(result: ToolResult): string {
     : result.output;
 }
 
+/** null runs the call; a result is what the model sees instead; editedArgs runs the user's version. */
+export type GateOutcome = ToolResult | { editedArgs: unknown } | null;
+
 /**
- * Decides whether a validated call may run. Returns null to allow it, or the result the model
- * sees instead (the tool does not run).
+ * Decides whether a validated call may run. May wait (for the user's answer to an approval
+ * card); edited arguments are validated again before they run.
  */
-export type ToolGate = (tool: Tool, args: unknown) => ToolResult | null;
+export type ToolGate = (
+  tool: Tool,
+  args: unknown,
+) => GateOutcome | Promise<GateOutcome>;
 
 export class ToolRegistry {
   private readonly tools = new Map<string, Tool>();
@@ -133,7 +139,7 @@ export class ToolRegistry {
         hint: `Use one of: ${this.names().join(', ')}.`,
       };
     }
-    const parsed = tool.schema.safeParse(args ?? {});
+    let parsed = tool.schema.safeParse(args ?? {});
     if (!parsed.success) {
       return {
         ok: false,
@@ -141,8 +147,18 @@ export class ToolRegistry {
         hint: `Fix those fields and call ${name} again.`,
       };
     }
-    const denied = gate?.(tool, parsed.data);
-    if (denied) return { ...denied, output: scrubPrefix(denied.output) };
+    const outcome = await gate?.(tool, parsed.data);
+    if (outcome && 'editedArgs' in outcome) {
+      parsed = tool.schema.safeParse(outcome.editedArgs);
+      if (!parsed.success) {
+        return {
+          ok: false,
+          output: `The user's edited version of this ${name} call is invalid: ${describeIssues(parsed.error)}.`,
+        };
+      }
+    } else if (outcome) {
+      return { ...outcome, output: scrubPrefix(outcome.output) };
+    }
     let result: ToolResult;
     try {
       result = await tool.run(parsed.data, context);

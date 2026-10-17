@@ -3,6 +3,7 @@ import { Box } from 'ink';
 import { cleanup, render } from 'ink-testing-library';
 import { ProviderError } from '../../src/provider/errors.ts';
 import type { ChatStream } from '../../src/provider/stream.ts';
+import { Approvals } from '../../src/safety/approvals.ts';
 import type { OvenMode } from '../../src/safety/permissions.ts';
 import { App } from '../../src/ui/app.tsx';
 import { Welcome } from '../../src/ui/components/welcome.tsx';
@@ -17,7 +18,7 @@ const SIZE = { columns: 80, rows: 24 };
 
 function app(turns: ScriptedTurn[], files: string[] = []) {
   const model = fakeModel(turns);
-  let mode: OvenMode = 'read-only';
+  let mode: OvenMode = 'bake';
   const ready: Promise<BackendResult> = Promise.resolve({
     ok: true,
     backend: {
@@ -34,6 +35,7 @@ function app(turns: ScriptedTurn[], files: string[] = []) {
       status={STATUS}
       ready={ready}
       listFiles={async () => files}
+      approvals={new Approvals()}
       oven={{
         get: () => mode,
         set: (m) => {
@@ -72,7 +74,7 @@ describe('welcome screen', () => {
     ).toBe(true);
     expect(
       rows.some((r) =>
-        r.endsWith('@ picks a file · / commands · shift+tab allows edits'),
+        r.endsWith('@ picks a file · / commands · shift+tab: oven mode'),
       ),
     ).toBe(true);
     // 8 rows of half blocks between the padding rows.
@@ -91,7 +93,7 @@ describe('App at 80x24', () => {
     expect(rows[0]).toContain('deepseek-v4.1-flash');
     expect(rows.join('\n')).toContain('cookie');
     expect(rows.join('\n')).toContain('Ask cookie anything');
-    expect(rows.at(-1)).toContain('Read-only');
+    expect(rows.at(-1)).toContain('Bake mode');
     for (const row of rows)
       expect(Bun.stringWidth(row)).toBeLessThanOrEqual(80);
   });
@@ -150,12 +152,21 @@ describe('App at 80x24', () => {
     );
   });
 
-  test('shift+tab toggles the oven mode the gate reads', async () => {
+  test('shift+tab cycles bake → full oven → taste → bake; the footer shows it', async () => {
     const { ui, mode } = app([]);
-    ui.stdin.write('\x1b[Z');
-    await tick();
-    expect(mode()).toBe('full-oven');
-    expect(frameRows(ui.lastFrame()).at(-1)).toContain('Full oven');
+    const seen: string[] = [];
+    for (let i = 0; i < 3; i++) {
+      ui.stdin.write('\x1b[Z');
+      await tick();
+      seen.push(
+        `${mode()} | ${frameRows(ui.lastFrame()).at(-1)?.split(' · ')[0]}`,
+      );
+    }
+    expect(seen).toEqual([
+      'full-oven |  Full oven mode',
+      'taste |  Taste mode',
+      'bake |  Bake mode',
+    ]);
   });
 
   test('ctrl+c once arms; the footer says to press again', async () => {
@@ -196,7 +207,8 @@ describe('App: interrupt and spinner', () => {
         status={STATUS}
         ready={ready}
         listFiles={async () => []}
-        oven={{ get: () => 'read-only', set: () => {} }}
+        oven={{ get: () => 'bake', set: () => {} }}
+        approvals={new Approvals()}
         version="0.1.0"
         size={SIZE}
         now={() => 0}

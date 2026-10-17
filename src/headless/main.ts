@@ -65,6 +65,7 @@ export async function headlessMain(
       stream: bindStream(provider.client),
       projectRoot: findRepoRoot(cwd),
       maxTurns: config.limits.max_turns,
+      permissions: config.permissions,
       out: io.out,
       err: io.err,
       signal: controller.signal,

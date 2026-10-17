@@ -7,7 +7,12 @@ import {
 import { findRepoRoot, loadConfig } from '../config/load.ts';
 import { prepareProvider } from '../provider/startup.ts';
 import { bindStream } from '../provider/stream.ts';
-import { interactiveGate, type OvenMode } from '../safety/permissions.ts';
+import { Approvals } from '../safety/approvals.ts';
+import {
+  interactiveGate,
+  type OvenMode,
+  policyFrom,
+} from '../safety/permissions.ts';
 import { projectFiles } from '../tools/glob.ts';
 import { createDefaultRegistry } from '../tools/index.ts';
 import { realRoot } from '../tools/paths.ts';
@@ -44,17 +49,24 @@ export async function interactiveMain(io: InteractiveIo): Promise<number> {
   const projectRoot = realRoot(findRepoRoot(cwd));
   const model = config.models[config.roles.main];
 
-  let mode: OvenMode = 'read-only';
+  let mode: OvenMode = config.permissions.mode;
   const oven = {
     get: () => mode,
     set: (next: OvenMode) => {
       mode = next;
     },
   };
+  const approvals = new Approvals();
   const readLedger: ReadLedger = new Map();
   const tools = createDefaultRegistry().forAgent(
     { projectRoot, readLedger },
-    { gate: interactiveGate(oven.get) },
+    {
+      gate: interactiveGate({
+        mode: oven.get,
+        policy: policyFrom(config, projectRoot),
+        ask: approvals.ask,
+      }),
+    },
   );
 
   // Aborted on exit, so a catalog fetch still in flight can't hold the process open.
@@ -94,6 +106,7 @@ export async function interactiveMain(io: InteractiveIo): Promise<number> {
         ready={ready}
         listFiles={() => projectFiles(projectRoot)}
         oven={oven}
+        approvals={approvals}
         version={io.version}
       />
     </ThemeContext.Provider>,

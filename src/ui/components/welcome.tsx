@@ -4,7 +4,7 @@ import { useTheme } from '../theme.ts';
 
 const TIPS = [
   'Ask for a change, or ask about the code.',
-  '@ picks a file · / commands · shift+tab allows edits',
+  '@ picks a file · / commands · shift+tab: oven mode',
 ];
 
 /** Chip and the lowercase wordmark, shown until the first message. */

@@ -1,6 +1,11 @@
 import { Box, useApp, useInput, useWindowSize } from 'ink';
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
-import type { OvenMode } from '../safety/permissions.ts';
+import type { Approvals } from '../safety/approvals.ts';
+import { MODE_LABELS, nextMode, type OvenMode } from '../safety/permissions.ts';
+import {
+  ApprovalPane,
+  approvalPaneHeight,
+} from './components/approval-pane.tsx';
 import { InputBox } from './components/input-box.tsx';
 import { LineRow } from './components/line-view.tsx';
 import { Spinner } from './components/spinner.tsx';
@@ -24,6 +29,7 @@ import {
   type StatusInfo,
   spinnerVisible,
 } from './state.ts';
+import { useApproval } from './use-approval.ts';
 
 export interface AppProps {
   status: StatusInfo;
@@ -33,6 +39,8 @@ export interface AppProps {
   listFiles: () => Promise<string[]>;
   /** The gate reads this, so shift+tab takes effect on the next tool call. */
   oven: { get(): OvenMode; set(mode: OvenMode): void };
+  /** Where approval cards come from: the interactive gate asks through it. */
+  approvals: Approvals;
   version: string;
   /** Fixed size for tests; the terminal's size otherwise. */
   size?: { columns: number; rows: number };
@@ -42,7 +50,7 @@ export interface AppProps {
 const HELP = [
   'enter sends · shift+enter, alt+enter or a trailing \\ adds a line · up/down browse history',
   '/ lists commands · @ picks a file · pgup/pgdn scroll',
-  'shift+tab toggles read-only / full oven · esc interrupts · ctrl+c twice exits',
+  'shift+tab cycles taste / bake / full oven · esc interrupts · ctrl+c twice exits',
   `Commands: ${COMMANDS.map((c) => c.name).join(', ')}`,
 ].join('\n');
 
@@ -69,6 +77,7 @@ export function App(props: AppProps) {
   const [oven, setOven] = useState<OvenMode>(() => props.oven.get());
   const [armed, setArmed] = useState(false);
   const loading = useRef(false);
+  const approval = useApproval(props.approvals);
   // Keys can arrive faster than React re-renders; the handler reads the live editor from here.
   const editorRef = useRef(editor);
   const updateEditor = (change: (e: EditorState) => EditorState) => {
@@ -113,8 +122,12 @@ export function App(props: AppProps) {
   }, [armed, ctrlC]);
 
   // Stop any running turn first, so its stream doesn't keep the process alive.
-  const exit = () => {
+  const stop = () => {
+    props.approvals.cancelAll();
     controller.interrupt();
+  };
+  const exit = () => {
+    stop();
     app.exit();
   };
 
@@ -128,17 +141,34 @@ export function App(props: AppProps) {
     void controller.submit(text);
   };
 
-  const inputHeight = inputRows(editor, columns - 4, '').length + 2;
-  const pickerHeight = pickerRows(picker, selected, columns).length;
-  const showSpinner = spinnerVisible(state);
+  const card = approval.request && {
+    request: approval.request,
+    phase: approval.phase,
+    editor: approval.editor,
+    width: columns,
+    // Status bar (2), footer (1) and the smallest transcript (3) come first.
+    maxRows: rows - 6,
+  };
+  const paneHeight = card
+    ? approvalPaneHeight(card)
+    : inputRows(editor, columns - 4, '').length +
+      2 +
+      pickerRows(picker, selected, columns).length;
+  // While a card waits on the user, nothing is baking.
+  const showSpinner = spinnerVisible(state) && !card;
   const transcriptHeight = Math.max(
     3,
-    rows - 2 - inputHeight - pickerHeight - 1 - (showSpinner ? 1 : 0),
+    rows - 2 - paneHeight - 1 - (showSpinner ? 1 : 0),
   );
 
   useInput((input, key) => {
     // Only presses count; Cookie doesn't ask for kitty release events, but never act on one.
     if (key.eventType === 'release') return;
+    if (approval.request) {
+      const handled = approval.handleKey(input, key);
+      if (handled === 'interrupt') return stop();
+      if (handled === 'handled') return;
+    }
     const current = editorRef.current;
     const busy = controller.busy || state.busy;
     const livePicker =
@@ -162,20 +192,20 @@ export function App(props: AppProps) {
           hasText: current.text !== '',
         });
         if (outcome === 'exit') return exit();
-        if (outcome === 'interrupt') controller.interrupt();
+        if (outcome === 'interrupt') stop();
         if (outcome === 'clear')
           updateEditor((e) => editorReduce(e, { type: 'clear' }));
         setArmed(true);
         return;
       }
       case 'interrupt':
-        controller.interrupt();
+        stop();
         return;
       case 'close-picker':
         setDismissed(current.text);
         return;
       case 'toggle-oven': {
-        const next: OvenMode = oven === 'read-only' ? 'full-oven' : 'read-only';
+        const next = nextMode(oven);
         props.oven.set(next);
         setOven(next);
         return;
@@ -242,21 +272,25 @@ export function App(props: AppProps) {
         />
       )}
       {showSpinner && <Spinner startedAt={startedAt} now={now} />}
-      <InputBox
-        editor={editor}
-        picker={picker}
-        selected={selected}
-        width={columns}
-        placeholder={
-          state.busy
-            ? 'Cookie is baking… esc to interrupt'
-            : 'Ask cookie anything'
-        }
-      />
+      {card ? (
+        <ApprovalPane {...card} />
+      ) : (
+        <InputBox
+          editor={editor}
+          picker={picker}
+          selected={selected}
+          width={columns}
+          placeholder={
+            state.busy
+              ? 'Cookie is baking… esc to interrupt'
+              : 'Ask cookie anything'
+          }
+        />
+      )}
       <LineRow
         line={[
           {
-            text: ` ${footerHints({ busy: state.busy, armed, readOnly: oven === 'read-only' })}`,
+            text: ` ${footerHints({ busy: state.busy, armed, mode: MODE_LABELS[oven] })}`,
             fg: armed ? 'crust' : 'chip',
           },
         ]}
