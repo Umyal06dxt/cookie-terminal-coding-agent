@@ -50,12 +50,39 @@ const limitsSchema = z.strictObject({
   request_timeout_ms: positiveInt.default(120_000),
 });
 
+const price = z
+  .number({ error: 'must be a number (USD per million tokens)' })
+  .nonnegative('must be 0 or more');
+
+/** USD per million tokens. Prices change often, so they live in config, never in code. */
+const modelPriceSchema = z.strictObject({
+  input: price,
+  output: price,
+  /** Defaults to the input price when the plan has no cache discount. */
+  cache_read: price.optional(),
+});
+
+const uiSchema = z.strictObject({
+  theme: z
+    .enum(['auto', 'dark', 'light'], {
+      error: 'must be "auto", "dark" or "light"',
+    })
+    .default('auto'),
+  /** Use the Nerd Font cookie glyph in the status bar; it can't be detected reliably. */
+  nerd_font: z.boolean({ error: 'must be true or false' }).default(false),
+});
+
 export const configSchema = z.strictObject({
   provider: providerSchema.prefault({}),
   models: modelsSchema,
   roles: rolesSchema.prefault({}),
   limits: limitsSchema.prefault({}),
+  /** Keyed by model id, e.g. [pricing."deepseek-v4.1-flash"]. */
+  pricing: z.record(z.string(), modelPriceSchema).default({}),
+  ui: uiSchema.prefault({}),
 });
+
+export type ModelPrice = z.infer<typeof modelPriceSchema>;
 
 export type CookieConfig = z.infer<typeof configSchema>;
 export type Role = keyof CookieConfig['roles'];

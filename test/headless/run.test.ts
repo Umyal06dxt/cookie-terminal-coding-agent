@@ -9,9 +9,9 @@ import { runHeadless } from '../../src/headless/run.ts';
 import { ProviderError } from '../../src/provider/errors.ts';
 import { NEEDS_APPROVAL } from '../../src/safety/permissions.ts';
 import { fakeModel, type ScriptedTurn } from '../fake-model.ts';
-import { tempProject, useTempProjects } from '../tools/helpers.ts';
+import { cleanUpTempProjects, tempProject } from '../tools/helpers.ts';
 
-useTempProjects();
+cleanUpTempProjects();
 
 const MATH =
   'export function add(a: number, b: number) {\n  return a - b;\n}\n';

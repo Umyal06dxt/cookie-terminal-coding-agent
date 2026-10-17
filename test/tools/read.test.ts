@@ -2,9 +2,14 @@ import { describe, expect, test } from 'bun:test';
 import { statSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { readTool } from '../../src/tools/read.ts';
-import { call, IS_WINDOWS, tempProject, useTempProjects } from './helpers.ts';
+import {
+  call,
+  cleanUpTempProjects,
+  IS_WINDOWS,
+  tempProject,
+} from './helpers.ts';
 
-useTempProjects();
+cleanUpTempProjects();
 
 const read = (p: ReturnType<typeof tempProject>, args: object) =>
   call(readTool, args, p.ctx());

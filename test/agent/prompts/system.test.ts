@@ -10,9 +10,9 @@ import {
   type PromptEnvironment,
 } from '../../../src/agent/prompts/system.ts';
 import { createDefaultRegistry } from '../../../src/tools/index.ts';
-import { tempProject, useTempProjects } from '../../tools/helpers.ts';
+import { cleanUpTempProjects, tempProject } from '../../tools/helpers.ts';
 
-useTempProjects();
+cleanUpTempProjects();
 
 const tools = createDefaultRegistry()
   .schemas()

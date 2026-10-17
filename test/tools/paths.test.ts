@@ -2,9 +2,9 @@ import { describe, expect, test } from 'bun:test';
 import { mkdirSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { resolveInRoot } from '../../src/tools/paths.ts';
-import { IS_WINDOWS, tempProject, useTempProjects } from './helpers.ts';
+import { cleanUpTempProjects, IS_WINDOWS, tempProject } from './helpers.ts';
 
-useTempProjects();
+cleanUpTempProjects();
 
 describe('resolveInRoot', () => {
   test('resolves relative and absolute paths inside the root', () => {

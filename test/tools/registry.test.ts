@@ -10,9 +10,9 @@ import {
 } from '../../src/tools/registry.ts';
 import { defineTool, type ToolResult } from '../../src/tools/types.ts';
 import { fakeModel } from '../fake-model.ts';
-import { tempProject, useTempProjects } from './helpers.ts';
+import { cleanUpTempProjects, tempProject } from './helpers.ts';
 
-useTempProjects();
+cleanUpTempProjects();
 
 const echo = defineTool({
   name: 'echo',

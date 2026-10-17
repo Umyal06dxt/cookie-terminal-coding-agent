@@ -15,7 +15,7 @@ Spec: docs/design.md. Progress: PROGRESS.md. Read both before starting any task.
 - Every module ships with tests in the same change. Never weaken, skip or delete a test to make it pass.
 - Tests never call the real API. Use test/fake-model.ts and recorded fixtures in test/fixtures/.
 - No new dependencies without asking. Already allowed: ink, react, openai, zod, smol-toml, diff,
-  web-tree-sitter, @biomejs/biome, ink-testing-library.
+  web-tree-sitter, @biomejs/biome, ink-testing-library, @types/react.
 - Tool results sent to the model never start with "Error:". They state what happened and how to recover.
 - Pure logic stays out of src/ui so it can be tested without a terminal.
 - Files stay under ~300 lines; split by responsibility.

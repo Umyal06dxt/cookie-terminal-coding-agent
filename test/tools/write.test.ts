@@ -3,9 +3,14 @@ import { existsSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { readTool } from '../../src/tools/read.ts';
 import { writeTool } from '../../src/tools/write.ts';
-import { call, IS_WINDOWS, tempProject, useTempProjects } from './helpers.ts';
+import {
+  call,
+  cleanUpTempProjects,
+  IS_WINDOWS,
+  tempProject,
+} from './helpers.ts';
 
-useTempProjects();
+cleanUpTempProjects();
 
 type Project = ReturnType<typeof tempProject>;
 const write = (p: Project, file_path: string, content: string) =>

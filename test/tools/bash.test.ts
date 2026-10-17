@@ -1,9 +1,14 @@
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { bashTool, findPosixShell, scrubEnv } from '../../src/tools/bash.ts';
-import { call, IS_WINDOWS, tempProject, useTempProjects } from './helpers.ts';
+import {
+  call,
+  cleanUpTempProjects,
+  IS_WINDOWS,
+  tempProject,
+} from './helpers.ts';
 
-useTempProjects();
+cleanUpTempProjects();
 
 type Project = ReturnType<typeof tempProject>;
 /** These tests use POSIX shell syntax; Windows runners without Git Bash skip them. */

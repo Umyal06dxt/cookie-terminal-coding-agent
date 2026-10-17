@@ -25,7 +25,7 @@ const created: string[] = [];
  * Call at the top of each test file. Bun shares one module instance across files, so a
  * top-level afterEach here would attach to the first importing file only.
  */
-export function useTempProjects(): void {
+export function cleanUpTempProjects(): void {
   afterEach(() => {
     for (const dir of created.splice(0))
       rmSync(dir, { recursive: true, force: true });

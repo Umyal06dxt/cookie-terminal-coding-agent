@@ -2,9 +2,9 @@ import { describe, expect, test } from 'bun:test';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { editTool } from '../../src/tools/edit.ts';
 import { readTool } from '../../src/tools/read.ts';
-import { call, tempProject, useTempProjects } from './helpers.ts';
+import { call, cleanUpTempProjects, tempProject } from './helpers.ts';
 
-useTempProjects();
+cleanUpTempProjects();
 
 type Project = ReturnType<typeof tempProject>;
 const read = (p: Project, file_path: string) =>

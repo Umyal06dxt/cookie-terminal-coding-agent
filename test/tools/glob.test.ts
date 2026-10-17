@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import { gitignoreMatchers, globTool } from '../../src/tools/glob.ts';
-import { call, tempProject, useTempProjects } from './helpers.ts';
+import { call, cleanUpTempProjects, tempProject } from './helpers.ts';
 
-useTempProjects();
+cleanUpTempProjects();
 
 type Project = ReturnType<typeof tempProject>;
 const glob = (p: Project, pattern: string) =>

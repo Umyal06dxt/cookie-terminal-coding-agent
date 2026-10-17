@@ -77,7 +77,46 @@ describe('loadConfig', () => {
         max_parallel_tools: 8,
         request_timeout_ms: 120_000,
       },
+      pricing: {},
+      ui: { theme: 'auto', nerd_font: false },
     });
+  });
+
+  test('pricing per model id and ui settings are read', () => {
+    write(
+      userFile,
+      `${MODELS}
+[pricing."deepseek-v4.1-flash"]
+input = 0.15
+output = 0.6
+cache_read = 0.003
+[ui]
+theme = "light"
+`,
+    );
+    const result = load();
+    if (!result.ok) throw new Error(result.message);
+    expect(result.config.pricing).toEqual({
+      'deepseek-v4.1-flash': { input: 0.15, output: 0.6, cache_read: 0.003 },
+    });
+    expect(result.config.ui).toEqual({ theme: 'light', nerd_font: false });
+  });
+
+  test('a bad price or theme names the field', () => {
+    write(
+      userFile,
+      `${MODELS}
+[pricing.m]
+input = -1
+output = "cheap"
+[ui]
+theme = "sepia"
+`,
+    );
+    const message = failure();
+    expect(message).toContain('[pricing.m] input: must be 0 or more');
+    expect(message).toContain('[pricing.m] output: must be a number');
+    expect(message).toContain('[ui] theme: must be "auto", "dark" or "light"');
   });
 
   test('the project file overrides the user file key by key', () => {
