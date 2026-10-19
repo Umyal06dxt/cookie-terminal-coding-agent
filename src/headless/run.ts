@@ -11,7 +11,7 @@ import { headlessGate, policyFrom } from '../safety/permissions.ts';
 import type { SessionLog } from '../storage/sessionLog.ts';
 import { createDefaultRegistry } from '../tools/index.ts';
 import { realRoot } from '../tools/paths.ts';
-import type { ReadLedger } from '../tools/types.ts';
+import type { ReadLedger, Tool } from '../tools/types.ts';
 import { exitCodeFor, jsonPrinter, TextPrinter, type Write } from './format.ts';
 
 export interface HeadlessOptions {
@@ -30,6 +30,8 @@ export interface HeadlessOptions {
   out: Write;
   err: Write;
   signal?: AbortSignal;
+  /** Tools to offer beside the default five. */
+  extraTools?: Tool[];
   /** Where the run is logged, so `cookie --resume` can reopen it. */
   log?: SessionLog;
   /** Overrides the detected environment, so tests get a fixed prompt. */
@@ -39,7 +41,9 @@ export interface HeadlessOptions {
 /** Runs one task to completion without a UI. Returns the process exit code. */
 export async function runHeadless(options: HeadlessOptions): Promise<number> {
   const projectRoot = realRoot(options.projectRoot);
-  const registry = createDefaultRegistry();
+  const registry = createDefaultRegistry().register(
+    ...(options.extraTools ?? []),
+  );
   const readLedger: ReadLedger = new Map();
   const tools = registry.forAgent(
     { projectRoot, readLedger },

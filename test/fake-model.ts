@@ -142,3 +142,16 @@ export function fakeModel(script: ScriptedTurn[]): FakeModel {
   stream.remaining = () => queue.length;
   return stream;
 }
+
+// Replaying real recordings (test/fixtures/recordings, made by scripts/record.ts) lives in its
+// own module; it is part of the fake-model toolkit, so it is exported from here too.
+export {
+  loadRecording,
+  type RecordingRecord,
+} from '../scripts/lib/recording.ts';
+export {
+  compareRequest,
+  type ReplayModel,
+  type ReplayOptions,
+  replayModel,
+} from './replay-model.ts';
